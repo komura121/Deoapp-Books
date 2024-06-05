@@ -1,74 +1,84 @@
 import React, { useState, useEffect } from "react";
-import { Box, Flex, Heading, Text, Image, Button, IconButton, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormHelperText, Textarea, ButtonGroup, Input, useDisclosure } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text, Image, Button, IconButton, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormHelperText, Textarea, ButtonGroup, Input, useDisclosure,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton } from "@chakra-ui/react";
 import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom"; // Import useParams
 import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../../config/firebase";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {updateDoc } from "firebase/firestore";
+import {db} from "../../config/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "../../config/firebase";
 
-function NewProjectPages({ bookId }) {
-  const [bookData, setBookData] = useState(null);
+function NewProjectPages() {
   const [newChapter, setNewChapter] = useState(null);
   const [newTitle, setNewTitle] = useState(null);
   const [description, setDescription] = useState("");
-  const [newCoverImage, setNewCoverImage] = useState("");
-  const [coverImageFile, setCoverImageFile] = useState(null);
+  const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
-  const { isOpen: isImageBoxVisible, onToggle: toggleImageBox } = useDisclosure();
-  const storage = getStorage();
-  const firestore = getFirestore();
+  const { booksId } = useParams(); // Gunakan useParams untuk mendapatkan booksId
+  const booksHeading = ""; // Tidak perlu lagi menggunakan useLocation
 
-  //
   useEffect(() => {
     const fetchBookData = async () => {
-      const bookRef = doc(firestore, "books", bookId);
-      const bookSnap = await getDoc(bookRef);
-      if (bookSnap.exists()) {
-        const bookData = bookSnap.data();
-        if (bookData && bookData.imageUrl) {
-          setCoverImageUrl(bookData.imageUrl);
+      if (!booksId) {
+        console.error("Book ID is undefined.");
+        return;
+      }
+  
+      try {
+        const bookRef = doc(db, "books", booksId);
+        const bookSnap = await getDoc(bookRef);
+        
+        if (bookSnap.exists()) {
+          const bookData = bookSnap.data();
+          if (bookData && bookData.coverImg) {
+            setCoverImageUrl(bookData.coverImg);
+          } else {
+            console.error("Cover image data not found in the book data.");
+          }
+        } else {
+          console.error("Book document does not exist.");
         }
+      } catch (error) {
+        console.error("Error fetching book data:", error);
       }
     };
-
+  
     fetchBookData();
-  }, []);
+  }, [booksId]);
 
-  //
-  const handleImageClick = () => {
-    toggleImageBox();
-  };
 
-  //
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setCoverImageFile(e.target.files[0]);
-    }
-  };
-
-  //
-  const handleSaveImage = async () => {
-    if (coverImageUrl) {
-      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
-      await uploadBytes(storageRef, coverImageFile);
+  const handleChangeImage = async (e) => {
+    const file = e.target.files[0];
+    const storageRef = ref(storage, `covers/${file.name}`);
+  
+    try {
+      // Upload file to Firebase Storage
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      await uploadTask;
+  
+      // Get the download URL for the uploaded file
       const downloadURL = await getDownloadURL(storageRef);
-      setCoverImageUrl(downloadURL); // Update URL gambar di tampilan
-      await updateDoc(doc(db, "books", bookId));
-      if (updateDoc.exists()) {
-        setCoverImageUrl(updateDoc.data().imageUrl);
-      } // Perbarui URL gambar di Firestore
-    } else if (newCoverImage) {
-      setCoverImageUrl(newCoverImage); // Update URL gambar di tampilan
-      await updateDoc(doc(db, "books", bookId));
-      // Perbarui URL gambar di Firestore
+      
+      // Update coverImageUrl state with the new download URL
+      setCoverImageUrl(downloadURL);
+  
+      // Close the image change modal
+      closeImageBox();
+  
+      // Update the coverImg field in Firestore
+      const bookRef = doc(db, "books", booksId);
+      await updateDoc(bookRef, {
+        coverImg: downloadURL,
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      // Optionally, add error handling logic here
     }
-    toggleImageBox();
   };
-
   return (
     <>
       <Navbar />
@@ -89,25 +99,13 @@ function NewProjectPages({ bookId }) {
               <Image src={coverImageUrl} alt="Cover Image" minH={{ base: "180px", sm: "230px", md: "250px", lg: "300px" }} maxW={{ base: "130px", sm: "180px", md: "200px", lg: "200px" }} mx="auto" />
               <Flex justify="center" my={4} direction={{ base: "column", xl: "row" }}>
                 <ButtonGroup justifyContent="center" p={5}>
-                  <Button onClick={handleImageClick} leftIcon={<FcEditImage size="25px" />} colorScheme="blue" variant="solid" size="md">
+                  <Button onClick={openImageBox} leftIcon={<FcEditImage size="25px" />} colorScheme="blue" variant="solid" size="md">
                     <Text fontWeight="100" display={{ base: "none", sm: "flex" }}>
                       Change Image
                     </Text>
                   </Button>
                 </ButtonGroup>
               </Flex>
-              {isImageBoxVisible && (
-                <Box>
-                  <Text>Image source</Text>
-                  <Input placeholder="your image source" size="sm" my={2} w="200px" onChange={(e) => setNewCoverImage(e.target.value)} />
-                  <Input type="file" accept="image/*" variant="solid" onChange={handleImageChange} size="sm" my={2} w="200px" />
-                  <Box>
-                    <Button colorScheme="blue" onClick={handleSaveImage}>
-                      Save
-                    </Button>
-                  </Box>
-                </Box>
-              )}
             </Box>
           </Box>
           <Flex w="full">
@@ -156,6 +154,27 @@ function NewProjectPages({ bookId }) {
           </Box>
         </Flex>
       </Flex>
+      {/* modal image Change */}
+      <Modal isOpen={isImageBoxVisible} onClose={closeImageBox}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Change Cover Image</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {/* Image upload form or input */}
+            {/* Example: */}
+            <Input h="200px" borderStyle="dashed" alignContent="center" type="file" onChange={handleChangeImage} />
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={handleChangeImage}>
+              Save
+            </Button>
+            <Button variant="ghost" onClick={closeImageBox}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       <Footer />
       <Background />
     </>

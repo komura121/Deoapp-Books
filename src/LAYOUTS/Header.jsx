@@ -3,7 +3,7 @@ import svg from "../assets/images/blob.svg";
 import { VStack, Flex, Box, Card, CardHeader, CardBody, CardFooter, Text, Heading, Button, Image, Tooltip, SimpleGrid, Input, InputGroup, Tag } from "@chakra-ui/react";
 import { useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton } from "@chakra-ui/react";
 import bg from "../assets/images/Bg.png";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db, collection, addDoc, getDocs, deleteDoc, doc, query, where, getDoc } from "../../config/firebase";
 import { FcFullTrash } from "react-icons/fc";
@@ -18,6 +18,8 @@ function Header() {
   const [coverImageFile, setCoverImageFile] = useState(null);
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+ 
 
   const handleInputChange = (e) => {
     setNewBookName(e.target.value);
@@ -68,11 +70,11 @@ function Header() {
       const storage = getStorage();
       const storageRef = ref(storage, `covers/${coverImageFile.name}`);
       await uploadBytes(storageRef, coverImageFile);
-      const imageUrl = await getDownloadURL(storageRef);
+      const limageUrl = await getDownloadURL(storageRef);
 
       const newBook = {
         heading: newBookName,
-        coverImage: imageUrl,
+        coverImg: limageUrl,
         text: "Lorem",
         deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
         price: "",
@@ -89,8 +91,10 @@ function Header() {
         setNewBookName("");
         setCoverImageFile(null);
         onClose();
+        setIsLoading(false);
       } catch (e) {
         console.error("Error adding document: ", e);
+        setIsLoading(false);
       }
     }
   };
@@ -162,7 +166,7 @@ function Header() {
                           </Button>
                         </Flex>
                         <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleCardClicked(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
-                          <Image w="180px" h="250px" src={item.coverImage} alt={item.heading} objectFit="cover" />
+                          <Image w="180px" h="250px" src={item.coverImg} alt={item.heading} objectFit="cover" />
                         </Button>
                       </Box>
                       <Text fontWeight="600" fontSize="md" textAlign="center" m={4}>
@@ -204,9 +208,13 @@ function Header() {
             </ModalBody>
 
             <ModalFooter>
-              <Button colorScheme="red" mr={3} onClick={handleAddBook}>
-                Create Project
-              </Button>
+            {isLoading ? (
+                <Image src={spinner} alt="Loading" />
+              ) : (
+                <Button colorScheme="red" mr={3} onClick={handleAddBook}>
+                  Create Project
+                </Button>
+              )}
             </ModalFooter>
           </ModalContent>
         </Modal>
