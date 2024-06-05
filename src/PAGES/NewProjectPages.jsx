@@ -8,6 +8,7 @@ import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 function NewProjectPages({ bookId }) {
   const [bookData, setBookData] = useState(null);
@@ -21,44 +22,52 @@ function NewProjectPages({ bookId }) {
   const storage = getStorage();
   const firestore = getFirestore();
 
-  const handleImageClick = () => {
-    toggleImageBox();
-  };
-
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setCoverImageFile(e.target.files[0]);
-    }
-  };
-
-  const handleSaveImage = async () => {
-    if (coverImageFile) {
-      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
-      await uploadBytes(storageRef, coverImageFile);
-      const downloadURL = await getDownloadURL(storageRef);
-      setCoverImageUrl(downloadURL);
-      await updateDoc(doc(firestore, "books", bookId), { coverImageUrl: downloadURL });
-    } else if (newCoverImage) {
-      setCoverImageUrl(newCoverImage);
-      await updateDoc(doc(firestore, "books", bookId), { coverImageUrl: newCoverImage });
-    }
-    toggleImageBox();
-  };
-
+  //
   useEffect(() => {
     const fetchBookData = async () => {
       const bookRef = doc(firestore, "books", bookId);
       const bookSnap = await getDoc(bookRef);
       if (bookSnap.exists()) {
         const bookData = bookSnap.data();
-        setBookData(bookData);
-        if (bookData.coverImageUrl) {
-          setCoverImageUrl(bookData.coverImageUrl);
+        if (bookData && bookData.imageUrl) {
+          setCoverImageUrl(bookData.imageUrl);
         }
       }
     };
+
     fetchBookData();
-  }, [firestore, bookId]);
+  }, []);
+
+  //
+  const handleImageClick = () => {
+    toggleImageBox();
+  };
+
+  //
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setCoverImageFile(e.target.files[0]);
+    }
+  };
+
+  //
+  const handleSaveImage = async () => {
+    if (coverImageUrl) {
+      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
+      await uploadBytes(storageRef, coverImageFile);
+      const downloadURL = await getDownloadURL(storageRef);
+      setCoverImageUrl(downloadURL); // Update URL gambar di tampilan
+      await updateDoc(doc(db, "books", bookId));
+      if (updateDoc.exists()) {
+        setCoverImageUrl(updateDoc.data().imageUrl);
+      } // Perbarui URL gambar di Firestore
+    } else if (newCoverImage) {
+      setCoverImageUrl(newCoverImage); // Update URL gambar di tampilan
+      await updateDoc(doc(db, "books", bookId));
+      // Perbarui URL gambar di Firestore
+    }
+    toggleImageBox();
+  };
 
   return (
     <>

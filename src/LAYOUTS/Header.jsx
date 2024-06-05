@@ -66,13 +66,13 @@ function Header() {
   const handleAddBook = async () => {
     if (newBookName.trim() !== "" && coverImageFile) {
       const storage = getStorage();
-      const storageRef = ref(storage, `coverImages/${coverImageFile.name}`);
+      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
       await uploadBytes(storageRef, coverImageFile);
       const imageUrl = await getDownloadURL(storageRef);
 
       const newBook = {
         heading: newBookName,
-        src: imageUrl,
+        coverImage: imageUrl,
         text: "Lorem",
         deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
         price: "",
@@ -162,7 +162,7 @@ function Header() {
                           </Button>
                         </Flex>
                         <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleCardClicked(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
-                          <Image w="180px" h="250px" src={item.src} alt={item.heading} objectFit="cover" />
+                          <Image w="180px" h="250px" src={item.coverImage} alt={item.heading} objectFit="cover" />
                         </Button>
                       </Box>
                       <Text fontWeight="600" fontSize="md" textAlign="center" m={4}>
