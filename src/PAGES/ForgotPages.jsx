@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Box, Spacer, Heading, FormControl, FormHelperText, FormLabel, Input, Flex, Button, Image, Card, InputGroup, InputRightElement, InputLeftElement, IconButton, Link, InputLeftAddon, ButtonGroup } from "@chakra-ui/react";
-import Background from "../LAYOUT/Background";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import logo from "../assets/images/LogoBooks.png";

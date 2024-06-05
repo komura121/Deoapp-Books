@@ -1,7 +1,7 @@
 import React from "react";
-import Navbar from "../LAYOUT/Navbar";
-import Header from "../LAYOUT/Header";
-import Background from "../LAYOUT/Background";
+import Navbar from "../LAYOUTS/Navbar";
+import Header from "../LAYOUTS/Header";
+import Background from "../LAYOUTS/Background";
 import { Flex, Box, Card, CardHeader, CardBody, CardFooter, Image } from "@chakra-ui/react";
 function PrintPages() {
   return (

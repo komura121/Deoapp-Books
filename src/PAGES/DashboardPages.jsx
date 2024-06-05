@@ -1,10 +1,10 @@
 import { Flex, Heading } from "@chakra-ui/react";
-import Navbar from "../LAYOUT/Navbar";
-import Header from "../LAYOUT/Header";
+import Navbar from "../LAYOUTS/Navbar";
+import Header from "../LAYOUTS/Header";
 import "@fontsource/poppins";
 
-import Footer from "../LAYOUT/Footer";
-import Background from "../LAYOUT/Background";
+import Footer from "../LAYOUTS/Footer";
+import Background from "../LAYOUTS/Background";
 
 function DashboardPages() {
   return (

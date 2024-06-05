@@ -45,7 +45,7 @@ function NewProjectPages({ bookId }) {
 
         // Check if the uid matches
         if (bookData.uid === uid) {
-          // Corrected uid comparison
+          // Ensure the uid field is correctly compared
           console.log(`Saving cover image to Firestore: ${coverImageUrl}`);
           await updateDoc(bookRef, {
             src: coverImageUrl,
