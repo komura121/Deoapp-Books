@@ -3,9 +3,9 @@ import { Box, Flex, Heading, Text, Image, Button, IconButton, Accordion, Accordi
 import { FcEditImage, FcFullTrash } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
 import { Link } from "react-router-dom";
-import Navbar from "../LAYOUT/Navbar";
-import Footer from "../LAYOUT/Footer";
-import Background from "../layout/Background";
+import Navbar from "../LAYOUTS/Navbar";
+import Footer from "../LAYOUTS/Footer";
+import Background from "../LAYOUTS/Background";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getFirestore, doc, updateDoc } from "firebase/firestore";
 
@@ -34,14 +34,29 @@ function NewProjectPages({ bookId }) {
     }
   };
 
-  const saveCoverImageToFirestore = async (coverImageUrl, bookId) => {
+  const saveCoverImageToFirestore = async (coverImageUrl, bookId, uid) => {
     const bookRef = doc(firestore, "books", bookId);
     try {
-      console.log(`Saving cover image to Firestore: ${coverImageUrl}`);
-      await updateDoc(bookRef, {
-        src: coverImageUrl,
-      });
-      console.log("Cover image saved to Firestore successfully");
+      // Retrieve the document to check the uid
+      const docSnapshot = await getDoc(bookRef);
+
+      if (docSnapshot.exists()) {
+        const bookData = docSnapshot.data();
+
+        // Check if the uid matches
+        if (bookData.uid === uid) {
+          // Corrected uid comparison
+          console.log(`Saving cover image to Firestore: ${coverImageUrl}`);
+          await updateDoc(bookRef, {
+            src: coverImageUrl,
+          });
+          console.log("Cover image saved to Firestore successfully");
+        } else {
+          console.error("UID does not match. Cannot update the cover image.");
+        }
+      } else {
+        console.error("No such document!");
+      }
     } catch (error) {
       console.error("Error adding cover image to Firestore: ", error);
     }
