@@ -22,7 +22,6 @@ function Header() {
   const handleInputChange = (e) => {
     setNewBookName(e.target.value);
   };
-
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
       setCoverImageFile(e.target.files[0]);
@@ -114,7 +113,7 @@ function Header() {
 
   return (
     <>
-      <Box pl={{ base: "18vw", md: "12vw", lg: "6vw" }}>
+      <Box pl={{ base: "2vw", sm: "4vw", md: "8vw", lg: "6vw" }}>
         <VStack bg="white" px={{ base: "20%", md: "20%", lg: "10%" }} maxW="100%">
           <Heading size="3xl" fontFamily="poppins">
             <Image src={logo} alt="Logo" maxH="350px" />
@@ -178,6 +177,9 @@ function Header() {
                         {item.label}
                       </Tag>
                     </CardFooter>
+                    <Text fontSize="8px" color="teal">
+                      author : {item.pemilik}
+                    </Text>
                   </Card>
                 ))
               ) : (
@@ -197,7 +199,8 @@ function Header() {
               <InputGroup>
                 <Input value={newBookName} onChange={handleInputChange} placeholder="Your Project Name"></Input>
               </InputGroup>
-              <Input type="file" onChange={handleImageChange} mt={4} />
+              <Text mt={4}>Upload Cover Image</Text>
+              <Input type="file" onChange={handleImageChange} alignContent="center" />
             </ModalBody>
 
             <ModalFooter>

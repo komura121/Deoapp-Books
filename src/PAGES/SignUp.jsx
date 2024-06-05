@@ -9,6 +9,7 @@ import { IoIosKey } from "react-icons/io";
 import logo from "../assets/images/LogoBooks.png";
 import { doc, setDoc } from "firebase/firestore";
 import { FaUser } from "react-icons/fa";
+import { displayName } from "react-quill";
 
 function SignUp() {
   const toast = useToast();
@@ -27,7 +28,7 @@ function SignUp() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       await setDoc(doc(db, "users", user.uid), {
-        name: user.name,
+        name: name,
         email: user.email,
         uid: user.uid,
         createdAt: new Date(),
@@ -50,6 +51,7 @@ function SignUp() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       await setDoc(doc(db, "users", user.uid), {
+        name: user.displayName,
         email: user.email,
         uid: user.uid,
         createdAt: new Date(),
@@ -79,7 +81,7 @@ function SignUp() {
               <InputLeftElement pointerEvents="none" color="gray.500">
                 <FaUser />
               </InputLeftElement>
-              <Input type="text" value={name} color="white" onChange={(e) => setEmail(e.target.value)} placeholder="Fullname" bg="gray.700" borderColor="gray.600" _placeholder={{ color: "gray.400" }} />
+              <Input value={name} color="white" onChange={(e) => setName(e.target.value)} placeholder="Fullname" bg="gray.700" borderColor="gray.600" _placeholder={{ color: "gray.400" }} />
             </InputGroup>
           </FormControl>
           <FormControl mb={4} isRequired>

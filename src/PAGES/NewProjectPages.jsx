@@ -1,101 +1,69 @@
 import React, { useState, useEffect } from "react";
 import { Box, Flex, Heading, Text, Image, Button, IconButton, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormHelperText, Textarea, ButtonGroup, Input, useDisclosure } from "@chakra-ui/react";
-import { FcEditImage, FcFullTrash } from "react-icons/fc";
+import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
 import { Link } from "react-router-dom";
 import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getFirestore, doc, updateDoc } from "firebase/firestore";
-
-const storage = getStorage();
-const firestore = getFirestore();
+import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 
 function NewProjectPages({ bookId }) {
+  const [bookData, setBookData] = useState(null);
   const [newChapter, setNewChapter] = useState(null);
   const [newTitle, setNewTitle] = useState(null);
   const [description, setDescription] = useState("");
-  const [coverImage, setCoverImage] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
-  const [newCoverImage, setNewCoverImage] = useState(null);
+  const [newCoverImage, setNewCoverImage] = useState("");
+  const [coverImageFile, setCoverImageFile] = useState(null);
+  const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
   const { isOpen: isImageBoxVisible, onToggle: toggleImageBox } = useDisclosure();
-  const { isOpen: isDeleteBoxVisible, onToggle: toggleDeleteBox } = useDisclosure();
-
-  useEffect(() => {
-    if (newCoverImage) {
-      saveCoverImageToFirestore(newCoverImage, bookId);
-    }
-  }, [newCoverImage, bookId]);
-
-  const handleGenerate = () => {
-    generateChapter(description);
-    if (newCoverImage) {
-      setCoverImage(newCoverImage);
-    }
-  };
-
-  const saveCoverImageToFirestore = async (coverImageUrl, bookId, uid) => {
-    const bookRef = doc(firestore, "books", bookId);
-    try {
-      // Retrieve the document to check the uid
-      const docSnapshot = await getDoc(bookRef);
-
-      if (docSnapshot.exists()) {
-        const bookData = docSnapshot.data();
-
-        // Check if the uid matches
-        if (bookData.uid === uid) {
-          // Ensure the uid field is correctly compared
-          console.log(`Saving cover image to Firestore: ${coverImageUrl}`);
-          await updateDoc(bookRef, {
-            src: coverImageUrl,
-          });
-          console.log("Cover image saved to Firestore successfully");
-        } else {
-          console.error("UID does not match. Cannot update the cover image.");
-        }
-      } else {
-        console.error("No such document!");
-      }
-    } catch (error) {
-      console.error("Error adding cover image to Firestore: ", error);
-    }
-  };
+  const storage = getStorage();
+  const firestore = getFirestore();
 
   const handleImageClick = () => {
     toggleImageBox();
   };
 
-  const handleDeleteClick = () => {
-    toggleDeleteBox();
-  };
-
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    const fileRef = ref(storage, file.name);
-    try {
-      console.log("Uploading image to Firebase Storage...");
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      console.log(`Image uploaded successfully. URL: ${url}`);
-      setNewCoverImage(url);
-    } catch (error) {
-      console.error("Error uploading image: ", error);
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setCoverImageFile(e.target.files[0]);
     }
   };
 
-  const handleSaveImage = () => {
-    if (newCoverImage) {
-      setCoverImage(newCoverImage);
-      saveCoverImageToFirestore(newCoverImage, bookId);
+  const handleSaveImage = async () => {
+    if (coverImageFile) {
+      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
+      await uploadBytes(storageRef, coverImageFile);
+      const downloadURL = await getDownloadURL(storageRef);
+      setCoverImageUrl(downloadURL);
+      await updateDoc(doc(firestore, "books", bookId), { coverImageUrl: downloadURL });
+    } else if (newCoverImage) {
+      setCoverImageUrl(newCoverImage);
+      await updateDoc(doc(firestore, "books", bookId), { coverImageUrl: newCoverImage });
     }
     toggleImageBox();
   };
 
+  useEffect(() => {
+    const fetchBookData = async () => {
+      const bookRef = doc(firestore, "books", bookId);
+      const bookSnap = await getDoc(bookRef);
+      if (bookSnap.exists()) {
+        const bookData = bookSnap.data();
+        setBookData(bookData);
+        if (bookData.coverImageUrl) {
+          setCoverImageUrl(bookData.coverImageUrl);
+        }
+      }
+    };
+    fetchBookData();
+  }, [firestore, bookId]);
+
   return (
     <>
       <Navbar />
-      <Flex direction="column" pl={{ base: "18vw", md: "12vw", lg: "6vw" }}>
+      <Flex direction="column" pl={{ base: "18vw", md: "12vw", lg: "7vw" }} pos="fixed" py={3}>
         <Box m={2}>
           <Link to="/">
             <Button variant="solid" colorScheme="green">
@@ -107,19 +75,14 @@ function NewProjectPages({ bookId }) {
       <Flex direction="column" pl={{ base: "18vw", md: "12vw", lg: "6vw" }}>
         <Flex direction={{ base: "column", lg: "row" }} pt="1.5" mx={{ base: "20%", md: "10%", lg: "10%" }} my={{ base: 4, md: 4 }} gap={4}>
           <Box>
-            <Box minW="200px" textAlign="center" p={{ base: "3%", lg: "5%" }} bg="white" borderRadius="lg">
+            <Box minW="300px" textAlign="center" p={{ base: "3%", lg: "5%" }} bg="white" borderRadius="lg">
               <Text p="2%">Cover Book</Text>
-              <Image src={coverImage} minH={{ base: "180px", sm: "230px", md: "250px", lg: "300px" }} maxW={{ base: "130px", sm: "180px", md: "200px", lg: "200px" }} mx="auto" />
+              <Image src={coverImageUrl} alt="Cover Image" minH={{ base: "180px", sm: "230px", md: "250px", lg: "300px" }} maxW={{ base: "130px", sm: "180px", md: "200px", lg: "200px" }} mx="auto" />
               <Flex justify="center" my={4} direction={{ base: "column", xl: "row" }}>
                 <ButtonGroup justifyContent="center" p={5}>
                   <Button onClick={handleImageClick} leftIcon={<FcEditImage size="25px" />} colorScheme="blue" variant="solid" size="md">
                     <Text fontWeight="100" display={{ base: "none", sm: "flex" }}>
-                      Image
-                    </Text>
-                  </Button>
-                  <Button onClick={handleDeleteClick} rightIcon={<FcFullTrash size="25px" />} colorScheme="red" variant="solid" size="md">
-                    <Text fontWeight="100" display={{ base: "none", sm: "flex" }}>
-                      Delete
+                      Change Image
                     </Text>
                   </Button>
                 </ButtonGroup>
@@ -134,17 +97,6 @@ function NewProjectPages({ bookId }) {
                       Save
                     </Button>
                   </Box>
-                </Box>
-              )}
-              {isDeleteBoxVisible && (
-                <Box>
-                  <Text mb={2}>Are You Sure Delete This Cover?</Text>
-                  <ButtonGroup gap={2}>
-                    <Button variant="outline" onClick={toggleDeleteBox}>
-                      Cancel
-                    </Button>
-                    <Button colorScheme="red">Delete</Button>
-                  </ButtonGroup>
                 </Box>
               )}
             </Box>
@@ -179,7 +131,7 @@ function NewProjectPages({ bookId }) {
           <Box px="2%" py="2%" mx="2%" mb="5%" bg="white" borderRadius="xl">
             <Box align="end">
               <ButtonGroup size="md" isAttached variant="outline">
-                <Button w={{ base: "100%", md: "auto" }} color="white" bgColor="blueviolet" onClick={handleGenerate}>
+                <Button w={{ base: "100%", md: "auto" }} color="white" bgColor="blueviolet">
                   Generate
                 </Button>
                 <IconButton bg="white" aria-label="Generate" icon={<GiChaingun />} size="md" />
