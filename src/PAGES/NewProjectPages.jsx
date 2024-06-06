@@ -37,7 +37,7 @@ import { updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../config/firebase";
-import makeApiCall from "../../config/api";
+import generateChapters from "../../config/api";
 
 function NewProjectPages() {
   const [newChapter, setNewChapter] = useState(null);
@@ -99,13 +99,19 @@ function NewProjectPages() {
 
   const handleGenerate = async (e) => {
     e.preventDefault();
+    const endpoint = "https://api.aimlapi.com/chat/completions";
     const data = {
-      prompt: description,
-      max_tokens: 60,
+      model: "gpt-3.5-turbo",
+      messages: [
+        // { role: "assistent", content: "\n\nThis is a test!" },
+        { role: "assistent", content: "You are a book writer. Generate a minimum of 5 chapter titles and a maximum of 5 subchapter titles for each." },
+        { role: "user", content: `Generate chapter titles and subchapter titles based on the book heading: ${bookHeading} with description: ${description}` },
+      ],
+      max_tokens: 60, // Adjust the token limit as needed
     };
     try {
-      const result = await makeApiCall(data);
-      setNewChapter(result.choices[0].text);
+      const result = await generateChapters(bookHeading, description);
+      setNewChapter(result);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -145,23 +151,23 @@ function NewProjectPages() {
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
-              {newChapter && newTitle ? (
-                <Accordion defaultIndex={[1]} allowMultiple>
-                  <AccordionItem>
-                    <AccordionButton>
-                      <Box flex="1" textAlign="center">
-                        {newChapter} : {newTitle}
-                      </Box>
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel p={4}>{/* Content */}</AccordionPanel>
-                  </AccordionItem>
-                </Accordion>
-              ) : (
+              {/* {newChapter && newTitle ? ( */}
+              <Accordion defaultIndex={[1]} allowMultiple>
+                <AccordionItem>
+                  <AccordionButton>
+                    <Box flex="1" textAlign="center">
+                      {newChapter}
+                    </Box>
+                    <AccordionIcon />
+                  </AccordionButton>
+                  <AccordionPanel p={4}>{/* Content */}</AccordionPanel>
+                </AccordionItem>
+              </Accordion>
+              {/* ) : (
                 <div style={{ textAlign: "center" }}>
                   <p>Generate Chapters First</p>
                 </div>
-              )}
+              )} */}
             </Box>
           </Flex>
         </Flex>
@@ -170,7 +176,7 @@ function NewProjectPages() {
           <Box px="2%" py="2%" mx="2%" mb="5%" bg="white" borderRadius="xl">
             <Box align="end">
               <ButtonGroup size="md" isAttached variant="outline">
-                <Button w={{ base: "100%", md: "auto" }} color="white" bgColor="blueviolet">
+                <Button w={{ base: "100%", md: "auto" }} color="white" bgColor="blueviolet" onClick={handleGenerate}>
                   Generate
                 </Button>
                 <IconButton bg="white" aria-label="Generate" icon={<GiChaingun />} size="md" />

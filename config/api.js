@@ -1,20 +1,20 @@
 import axios from "axios";
 
-const apiKey = import.meta.env.VITE_API_KEY;
+const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-const makeApiCall = async (data) => {
+const generateChapters = async (bookHeading, description) => {
   try {
-    const response = await axios.post("https://api.openai.com/v1/engines/davinci-codex/completions", data, {
+    const response = await axios.post(endpoint, data, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
     });
-    return response.data;
+    return response.data.choices[0].message.content;
   } catch (error) {
     console.error("Error making API call:", error);
     throw error;
   }
 };
 
-export default makeApiCall;
+export default generateChapters;
