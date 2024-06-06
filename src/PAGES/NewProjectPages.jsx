@@ -28,7 +28,7 @@ import {
 } from "@chakra-ui/react";
 import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
-import { Link, useParams } from "react-router-dom"; // Import useParams
+import { Link, useNavigate, useParams } from "react-router-dom"; // Import useParams
 import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
@@ -39,12 +39,13 @@ import generateChapters from "../../config/api";
 import { db } from "../../config/firebase";
 
 function NewProjectPages() {
+  const [chapters, setChapters] = useState(new Map());
   const [newChapter, setNewChapter] = useState(null);
   const [description, setDescription] = useState("");
   const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
   const { booksId, booksHeading } = useParams();
-
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchBookData = async () => {
       if (!booksId) {
@@ -95,43 +96,39 @@ function NewProjectPages() {
     }
   };
 
-  const parseChapters = (text) => {
-    const lines = text.split("\n").filter((line) => line.trim() !== "");
-    const chapters = {};
-    let currentChapter = "";
-    let subchapterCount = 0;
-
-    lines.forEach((line) => {
-      if (line.toLowerCase().startsWith("chapter")) {
-        currentChapter = `chapter${Object.keys(chapters).length + 1}`;
-        chapters[currentChapter] = { title: line.trim(), subchapters: {} };
-        subchapterCount = 0;
-      } else if (line.toLowerCase().startsWith("subchapter")) {
-        subchapterCount++;
-        chapters[currentChapter].subchapters[`subchapter${subchapterCount}`] = { title: line.trim(), content: "" };
-      } else if (currentChapter) {
-        const subchapterKey = `subchapter${subchapterCount}`;
-        if (chapters[currentChapter].subchapters[subchapterKey]) {
-          chapters[currentChapter].subchapters[subchapterKey].content += ` ${line.trim()}`;
-        }
-      }
-    });
-
-    return chapters;
-  };
-
   const handleGenerate = async (e) => {
-    e.preventDefault();
-
     try {
       const result = await generateChapters(booksHeading, description);
-      const parsedChapters = parseChapters(result);
-      setNewChapter(parsedChapters);
+      setNewChapter(result);
 
       const bookRef = doc(db, "books", booksId);
-      await updateDoc(bookRef, {
-        chapters: parsedChapters,
-      });
+      const bookSnap = await getDoc(bookRef);
+
+      if (bookSnap.exists()) {
+        const bookData = bookSnap.data();
+        let existingChapters = bookData.chapters || {}; // Initialize as empty object if chapters field doesn't exist
+
+        // Generate a unique ID for the new chapter
+        const newChapterId = Math.random().toString(36).substring(7);
+
+        // Create the new chapter object
+        const newChapterData = { id: newChapterId, title: result, content: result };
+
+        // Add the new chapter to existing chapters using the generated ID
+        existingChapters[newChapterId] = newChapterData;
+
+        // Update only the chapters field of the document
+        await updateDoc(bookRef, {
+          chapters: existingChapters,
+        });
+
+        // Update the local state with the new chapter
+        setChapters(new Map(Object.entries(existingChapters)));
+
+        console.log("Berhasil menambahkan chapter");
+      } else {
+        console.error("Book document does not exist.");
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -166,31 +163,33 @@ function NewProjectPages() {
               </Flex>
             </Box>
           </Box>
-          <Flex w="full">
-            <Box flex="1" bg="white" borderRadius="lg" px="5%">
+          <Flex maxW="78%">
+            <Box flex="1" bg="white" borderRadius="lg" px="5%" w="full">
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
-              <Accordion defaultIndex={[1]} allowMultiple>
-                {newChapter &&
-                  Object.keys(newChapter).map((chapterKey) => (
-                    <AccordionItem key={chapterKey}>
+              <Accordion defaultIndex={[1]} allowMultiple w="full">
+                {Array.from(chapters).map(([key, value]) => (
+                  <AccordionItem key={key}>
+                    <h2>
                       <AccordionButton>
                         <Box flex="1" textAlign="left">
-                          {newChapter[chapterKey].title}
+                          <Text fontWeight="bold">
+                            {value.id}.{value.title}
+                          </Text>
                         </Box>
                         <AccordionIcon />
                       </AccordionButton>
-                      <AccordionPanel pb={4}>
-                        {Object.keys(newChapter[chapterKey].subchapters).map((subchapterKey) => (
-                          <Box key={subchapterKey}>
-                            <Text fontWeight="bold">{newChapter[chapterKey].subchapters[subchapterKey].title}</Text>
-                            <Text>{newChapter[chapterKey].subchapters[subchapterKey].content}</Text>
-                          </Box>
-                        ))}
-                      </AccordionPanel>
-                    </AccordionItem>
-                  ))}
+                    </h2>
+                    <AccordionPanel pb={4} maxW="70%">
+                      <Box>
+                        <Button variant="ghost" fontWeight="400">
+                          {value.content}
+                        </Button>
+                      </Box>
+                    </AccordionPanel>
+                  </AccordionItem>
+                ))}
               </Accordion>
             </Box>
           </Flex>
