@@ -133,7 +133,9 @@ function NewProjectPages() {
       console.error("Error fetching data:", error);
     }
   };
-
+  const handleCardClicked = (booksId, booksHeading, newChapterId) => {
+    navigate(`/project/${booksId}/${booksHeading}/${newChapterId}`);
+  };
   return (
     <>
       <Navbar />
@@ -163,12 +165,12 @@ function NewProjectPages() {
               </Flex>
             </Box>
           </Box>
-          <Flex maxW="78%">
+          <Flex maxW="78%" minW="78%">
             <Box flex="1" bg="white" borderRadius="lg" px="5%" w="full">
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
-              <Accordion defaultIndex={[1]} allowMultiple w="full">
+              <Accordion defaultIndex={[0]} allowMultiple w="full">
                 {Array.from(chapters).map(([key, value]) => (
                   <AccordionItem key={key}>
                     <h2>
