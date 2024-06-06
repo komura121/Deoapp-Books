@@ -185,7 +185,7 @@ function NewProjectPages() {
                     </h2>
                     <AccordionPanel pb={4} maxW="70%">
                       <Box>
-                        <Button variant="ghost" fontWeight="400">
+                        <Button variant="ghost" fontWeight="400" onClick = {handleCardClicked}>
                           {value.content}
                         </Button>
                       </Box>
