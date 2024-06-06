@@ -46,6 +46,8 @@ function NewProjectPages() {
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
   const { booksId, booksHeading } = useParams();
   const navigate = useNavigate();
+
+  // Fetch Data
   useEffect(() => {
     const fetchBookData = async () => {
       if (!booksId) {
@@ -64,6 +66,11 @@ function NewProjectPages() {
           } else {
             console.error("Cover image data not found in the book data.");
           }
+          if (bookData && bookData.chapters) {
+            setChapters(new Map(Object.entries(bookData.chapters)));
+          } else {
+            console.error("Chapters data not found in the book data.");
+          }
         } else {
           console.error("Book document does not exist.");
         }
@@ -75,6 +82,7 @@ function NewProjectPages() {
     fetchBookData();
   }, [booksId]);
 
+  // Ganti Gambar
   const handleChangeImage = async (e) => {
     const file = e.target.files[0];
     const storageRef = ref(storage, `covers/${file.name}`);
@@ -96,33 +104,51 @@ function NewProjectPages() {
     }
   };
 
+  //Generate AI
   const handleGenerate = async (e) => {
+    e.preventDefault();
     try {
       const result = await generateChapters(booksHeading, description);
-      setNewChapter(result);
+
+      // Parse the response
+      const lines = result.split("\n").filter((line) => line.trim() !== "");
+      const newChapters = new Map();
+      let currentChapter = null;
+
+      lines.forEach((line) => {
+        if (line.startsWith("Chapter")) {
+          const chapterParts = line.split(":");
+          currentChapter = {
+            id: Math.random().toString(36).substring(7),
+            title: chapterParts[0].trim(),
+            content: chapterParts[1].trim(),
+            subchapters: map(),
+          };
+          newChapters.set(currentChapter.id, currentChapter);
+        } else if (line.startsWith("Subchapter") && currentChapter) {
+          const subchapterParts = line.split(":");
+          currentChapter.subchapters.push({
+            title: subchapterParts[0].trim(),
+            content: subchapterParts[1].trim(),
+          });
+        }
+      });
 
       const bookRef = doc(db, "books", booksId);
       const bookSnap = await getDoc(bookRef);
 
       if (bookSnap.exists()) {
         const bookData = bookSnap.data();
-        let existingChapters = bookData.chapters || {}; // Initialize as empty object if chapters field doesn't exist
+        let existingChapters = bookData.chapters || {};
 
-        // Generate a unique ID for the new chapter
-        const newChapterId = Math.random().toString(36).substring(7);
+        newChapters.forEach((chapter, id) => {
+          existingChapters[id] = chapter;
+        });
 
-        // Create the new chapter object
-        const newChapterData = { id: newChapterId, title: result, content: result };
-
-        // Add the new chapter to existing chapters using the generated ID
-        existingChapters[newChapterId] = newChapterData;
-
-        // Update only the chapters field of the document
         await updateDoc(bookRef, {
           chapters: existingChapters,
         });
 
-        // Update the local state with the new chapter
         setChapters(new Map(Object.entries(existingChapters)));
 
         console.log("Berhasil menambahkan chapter");
@@ -133,8 +159,9 @@ function NewProjectPages() {
       console.error("Error fetching data:", error);
     }
   };
-  const handleCardClicked = (booksId, booksHeading, newChapterId) => {
-    navigate(`/project/${booksId}/${booksHeading}/${newChapterId}`);
+
+  const handleCardClicked = (chapterId) => {
+    navigate(`/project/${booksId}/${booksHeading}/${chapterId}`);
   };
   return (
     <>
@@ -170,22 +197,21 @@ function NewProjectPages() {
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
+              {/* Accordion  */}
               <Accordion defaultIndex={[0]} allowMultiple w="full">
                 {Array.from(chapters).map(([key, value]) => (
                   <AccordionItem key={key}>
                     <h2>
                       <AccordionButton>
                         <Box flex="1" textAlign="left">
-                          <Text fontWeight="bold">
-                            {value.id}.{value.title}
-                          </Text>
+                          <Text fontWeight="bold">{value.title}</Text>
                         </Box>
                         <AccordionIcon />
                       </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4} maxW="70%">
                       <Box>
-                        <Button variant="ghost" fontWeight="400" onClick = {handleCardClicked}>
+                        <Button variant="ghost" fontWeight="400" onClick={handleCardClicked}>
                           {value.content}
                         </Button>
                       </Box>
@@ -193,6 +219,7 @@ function NewProjectPages() {
                   </AccordionItem>
                 ))}
               </Accordion>
+              {/* END OF ACCORDION */}
             </Box>
           </Flex>
         </Flex>
@@ -217,6 +244,7 @@ function NewProjectPages() {
           </Box>
         </Flex>
       </Flex>
+
       {/* modal image Change */}
       <Modal isOpen={isImageBoxVisible} onClose={closeImageBox}>
         <ModalOverlay />

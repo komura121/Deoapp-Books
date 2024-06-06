@@ -20,7 +20,7 @@ function App() {
         <Route path="/forgot-password" Component={ForgotPages} />
         <Route path="/" Component={DashboardPages} />
         <Route path="/project/:booksId/:booksHeading/new" Component={NewProjectPages} />
-        <Route path="/project/chapter" Component={ChaptersPages} />
+        <Route path="/project/:booksId/:booksHeading/:chapterId" Component={ChaptersPages} />
         <Route path="/print" Component={PrintPages} />
       </Routes>
     </>

@@ -6,7 +6,18 @@ const isTestMode = import.meta.env.VITE_TEST_MODE === "true";
 const generateChapters = async (bookHeading, description) => {
   if (isTestMode) {
     // Mock response for test mode
-    return `Mock response for book heading: ${bookHeading} and description: ${description}`;
+    return {
+      chapters: [
+        {
+          title: "Chapter 1",
+          subchapters: ["Subchapter 1.1", "Subchapter 1.2"],
+        },
+        {
+          title: "Chapter 2",
+          subchapters: ["Subchapter 2.1", "Subchapter 2.2"],
+        },
+      ],
+    };
   }
 
   const endpoint = "https://api.aimlapi.com/v1/chat/completions";

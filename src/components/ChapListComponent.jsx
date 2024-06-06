@@ -24,7 +24,7 @@ import {
   DrawerCloseButton,
 } from "@chakra-ui/react";
 import { IconButton } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { GiChaingun } from "react-icons/gi";
 import QuillReact from "./QuillReact";
 import "../App.css";
@@ -34,45 +34,12 @@ import flower from "../assets/images/flowes.png";
 import axios from "axios";
 
 function ChapListComponent() {
+  const { booksId, booksHeading } = useParams();
   const [activeSubchapter, setActiveSubchapter] = useState(1);
   const handleSubchapterClick = (subchapter) => {
     setActiveSubchapter(subchapter);
   };
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const btnRef = React.useRef();
-  const books = [
-    {
-      chapter: "1",
-      title: "Bisnis dari nol",
-      subchapters: ["1.1 Bisnis Digital", "1.2 Bisnis FNB", "1.3 Bisnis Fashion", "1.4 Seminar ", "1.5 Management Trainee"],
-      Placeholder: [
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Iste et, reiciendis eligendi molestiae iure dignissimos debitis nisi voluptatum ad? Totam, pariatur. Laborum est enim dolorum aspernatur optio cum. Eum, consequatur?",
-      ],
-    },
-    {
-      chapter: "2 Bisnis F&B",
-      subchapters: ["2.1 Resep", "2.2 PreOrder Food", "2.3 Makanan Cepat Saji", "2.4 Catering"],
-      Placeholder: [
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Iste et, reiciendis eligendi molestiae iure dignissimos debitis nisi voluptatum ad? Totam, pariatur. Laborum est enim dolorum aspernatur optio cum. Eum, consequatur?",
-      ],
-    },
-    {
-      chapter: "3",
-      title: "Bisnis Digital",
-      subchapters: ["3.1 Grafik Desain", "3.2 Web Developer"],
-      Placeholder: [
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Iste et, reiciendis eligendi molestiae iure dignissimos debitis nisi voluptatum ad? Totam, pariatur. Laborum est enim dolorum aspernatur optio cum. Eum, consequatur?",
-      ],
-    },
-    {
-      chapter: "4",
-      title: "Bisnis Fashion",
-      subchapters: ["4.1 Preoder Jahit", "4.2 White Label", "4.3 Jasa Titip", "4.4 Thrift"],
-      Placeholder: [
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Iste et, reiciendis eligendi molestiae iure dignissimos debitis nisi voluptatum ad? Totam, pariatur. Laborum est enim dolorum aspernatur optio cum. Eum, consequatur?",
-      ],
-    },
-  ];
+
   return (
     <>
       <Flex left={{ base: "8vw", sm: "10vw", md: "6vw" }} mx={{ base: "10%", lg: "8%" }} fontFamily="poppins" pos="fixed" h={{ base: "100%", lg: "auto" }} w="80%" zIndex={0} my="5%">
@@ -109,7 +76,7 @@ function ChapListComponent() {
               </Accordion>
 
               <Box pt={20}>
-                <Link to="/create-project">
+                <Link to="/project/:booksId/:booksHeading/new">
                   <Button>Back</Button>
                 </Link>
               </Box>
@@ -194,7 +161,7 @@ function ChapListComponent() {
               </Accordion>
             </DrawerBody>
             <DrawerFooter>
-              <Link to="/create-project">
+              <Link to="/project/:booksId/:booksHeading/new">
                 <Button>Back</Button>
               </Link>
             </DrawerFooter>
