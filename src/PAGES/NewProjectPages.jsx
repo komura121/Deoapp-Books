@@ -1,5 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { Box, Flex, Heading, Text, Image, Button, IconButton, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormHelperText, Textarea, ButtonGroup, Input, useDisclosure,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Image,
+  Button,
+  IconButton,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  FormControl,
+  FormHelperText,
+  Textarea,
+  ButtonGroup,
+  Input,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+} from "@chakra-ui/react";
 import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
 import { Link, useLocation, useParams } from "react-router-dom"; // Import useParams
@@ -7,19 +33,19 @@ import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import {updateDoc } from "firebase/firestore";
-import {db} from "../../config/firebase";
+import { updateDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../config/firebase";
+import makeApiCall from "../../config/api";
 
 function NewProjectPages() {
   const [newChapter, setNewChapter] = useState(null);
-  const [newTitle, setNewTitle] = useState(null);
+  const [newSubchapter, setNewSubchapter] = useState(null);
   const [description, setDescription] = useState("");
   const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
-  const { booksId } = useParams(); // Gunakan useParams untuk mendapatkan booksId
-  const booksHeading = ""; // Tidak perlu lagi menggunakan useLocation
+  const { booksId, booksHeading } = useParams(); // Gunakan useParams untuk mendapatkan booksId
 
   useEffect(() => {
     const fetchBookData = async () => {
@@ -27,11 +53,11 @@ function NewProjectPages() {
         console.error("Book ID is undefined.");
         return;
       }
-  
+
       try {
         const bookRef = doc(db, "books", booksId);
         const bookSnap = await getDoc(bookRef);
-        
+
         if (bookSnap.exists()) {
           const bookData = bookSnap.data();
           if (bookData && bookData.coverImg) {
@@ -46,39 +72,45 @@ function NewProjectPages() {
         console.error("Error fetching book data:", error);
       }
     };
-  
+
     fetchBookData();
   }, [booksId]);
-
 
   const handleChangeImage = async (e) => {
     const file = e.target.files[0];
     const storageRef = ref(storage, `covers/${file.name}`);
-  
+
     try {
-      // Upload file to Firebase Storage
       const uploadTask = uploadBytesResumable(storageRef, file);
       await uploadTask;
-  
-      // Get the download URL for the uploaded file
+
       const downloadURL = await getDownloadURL(storageRef);
-      
-      // Update coverImageUrl state with the new download URL
       setCoverImageUrl(downloadURL);
-  
-      // Close the image change modal
+
       closeImageBox();
-  
-      // Update the coverImg field in Firestore
       const bookRef = doc(db, "books", booksId);
       await updateDoc(bookRef, {
         coverImg: downloadURL,
       });
     } catch (error) {
       console.error("Error uploading file:", error);
-      // Optionally, add error handling logic here
     }
   };
+
+  const handleGenerate = async (e) => {
+    e.preventDefault();
+    const data = {
+      prompt: description,
+      max_tokens: 60,
+    };
+    try {
+      const result = await makeApiCall(data);
+      setNewChapter(result.choices[0].text);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -111,7 +143,7 @@ function NewProjectPages() {
           <Flex w="full">
             <Box flex="1" bg="white" borderRadius="lg" px="5%">
               <Heading as="h2" size="md" my={5} fontWeight="600">
-                Chapters
+                {booksHeading}
               </Heading>
               {newChapter && newTitle ? (
                 <Accordion defaultIndex={[1]} allowMultiple>
@@ -166,9 +198,6 @@ function NewProjectPages() {
             <Input h="200px" borderStyle="dashed" alignContent="center" type="file" onChange={handleChangeImage} />
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleChangeImage}>
-              Save
-            </Button>
             <Button variant="ghost" onClick={closeImageBox}>
               Cancel
             </Button>
