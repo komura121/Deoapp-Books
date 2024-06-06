@@ -28,24 +28,22 @@ import {
 } from "@chakra-ui/react";
 import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
-import { Link, useLocation, useParams } from "react-router-dom"; // Import useParams
+import { Link, useParams } from "react-router-dom"; // Import useParams
 import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { updateDoc } from "firebase/firestore";
-import { db } from "../../config/firebase";
+import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../config/firebase";
 import generateChapters from "../../config/api";
+import { db } from "../../config/firebase";
 
 function NewProjectPages() {
   const [newChapter, setNewChapter] = useState(null);
-  const [newSubchapter, setNewSubchapter] = useState(null);
   const [description, setDescription] = useState("");
   const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
-  const { booksId, booksHeading } = useParams(); // Gunakan useParams untuk mendapatkan booksId
+  const { booksId, booksHeading } = useParams();
 
   useEffect(() => {
     const fetchBookData = async () => {
@@ -97,21 +95,43 @@ function NewProjectPages() {
     }
   };
 
+  const parseChapters = (text) => {
+    const lines = text.split("\n").filter((line) => line.trim() !== "");
+    const chapters = {};
+    let currentChapter = "";
+    let subchapterCount = 0;
+
+    lines.forEach((line) => {
+      if (line.toLowerCase().startsWith("chapter")) {
+        currentChapter = `chapter${Object.keys(chapters).length + 1}`;
+        chapters[currentChapter] = { title: line.trim(), subchapters: {} };
+        subchapterCount = 0;
+      } else if (line.toLowerCase().startsWith("subchapter")) {
+        subchapterCount++;
+        chapters[currentChapter].subchapters[`subchapter${subchapterCount}`] = { title: line.trim(), content: "" };
+      } else if (currentChapter) {
+        const subchapterKey = `subchapter${subchapterCount}`;
+        if (chapters[currentChapter].subchapters[subchapterKey]) {
+          chapters[currentChapter].subchapters[subchapterKey].content += ` ${line.trim()}`;
+        }
+      }
+    });
+
+    return chapters;
+  };
+
   const handleGenerate = async (e) => {
     e.preventDefault();
-    const endpoint = "https://api.aimlapi.com/chat/completions";
-    const data = {
-      model: "gpt-3.5-turbo",
-      messages: [
-        // { role: "assistent", content: "\n\nThis is a test!" },
-        { role: "assistent", content: "You are a book writer. Generate a minimum of 5 chapter titles and a maximum of 5 subchapter titles for each." },
-        { role: "user", content: `Generate chapter titles and subchapter titles based on the book heading: ${bookHeading} with description: ${description}` },
-      ],
-      max_tokens: 60, // Adjust the token limit as needed
-    };
+
     try {
-      const result = await generateChapters(bookHeading, description);
-      setNewChapter(result);
+      const result = await generateChapters(booksHeading, description);
+      const parsedChapters = parseChapters(result);
+      setNewChapter(parsedChapters);
+
+      const bookRef = doc(db, "books", booksId);
+      await updateDoc(bookRef, {
+        chapters: parsedChapters,
+      });
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -151,23 +171,27 @@ function NewProjectPages() {
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
-              {/* {newChapter && newTitle ? ( */}
               <Accordion defaultIndex={[1]} allowMultiple>
-                <AccordionItem>
-                  <AccordionButton>
-                    <Box flex="1" textAlign="center">
-                      {newChapter}
-                    </Box>
-                    <AccordionIcon />
-                  </AccordionButton>
-                  <AccordionPanel p={4}>{/* Content */}</AccordionPanel>
-                </AccordionItem>
+                {newChapter &&
+                  Object.keys(newChapter).map((chapterKey) => (
+                    <AccordionItem key={chapterKey}>
+                      <AccordionButton>
+                        <Box flex="1" textAlign="left">
+                          {newChapter[chapterKey].title}
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel pb={4}>
+                        {Object.keys(newChapter[chapterKey].subchapters).map((subchapterKey) => (
+                          <Box key={subchapterKey}>
+                            <Text fontWeight="bold">{newChapter[chapterKey].subchapters[subchapterKey].title}</Text>
+                            <Text>{newChapter[chapterKey].subchapters[subchapterKey].content}</Text>
+                          </Box>
+                        ))}
+                      </AccordionPanel>
+                    </AccordionItem>
+                  ))}
               </Accordion>
-              {/* ) : (
-                <div style={{ textAlign: "center" }}>
-                  <p>Generate Chapters First</p>
-                </div>
-              )} */}
             </Box>
           </Flex>
         </Flex>
@@ -200,7 +224,6 @@ function NewProjectPages() {
           <ModalCloseButton />
           <ModalBody>
             {/* Image upload form or input */}
-            {/* Example: */}
             <Input h="200px" borderStyle="dashed" alignContent="center" type="file" onChange={handleChangeImage} />
           </ModalBody>
           <ModalFooter>
