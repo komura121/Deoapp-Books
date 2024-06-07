@@ -10,6 +10,7 @@ import { FcFullTrash } from "react-icons/fc";
 import { auth } from "../../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { serverTimestamp } from "firebase/firestore";
 
 function Header() {
   const [newBooks, setNewBooks] = useState([]);
@@ -19,7 +20,6 @@ function Header() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
- 
 
   const handleInputChange = (e) => {
     setNewBookName(e.target.value);
@@ -64,6 +64,16 @@ function Header() {
     return () => unsubscribe();
   }, []);
 
+  const currentDate = new Date(); // Current date and time
+
+  // Format current date and time into "DD/MM/YYYY HH:mm" format
+  const formattedDateTime = currentDate.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   // Add Data
   const handleAddBook = async () => {
     if (newBookName.trim() !== "" && coverImageFile) {
@@ -82,6 +92,8 @@ function Header() {
         category: "",
         pemilik: userName,
         uid: user.uid,
+        created_at: formattedDateTime(),
+        updated_at: formattedDateTime(),
       };
 
       try {
@@ -184,6 +196,12 @@ function Header() {
                     <Text fontSize="8px" color="teal">
                       author : {item.pemilik}
                     </Text>
+                    {/* <Text fontSize="8px" color="teal">
+                      Last Modified : {item.updated_at}
+                    </Text>
+                    <Text fontSize="8px" color="teal">
+                      Created : {item.created_at}
+                    </Text> */}
                   </Card>
                 ))
               ) : (
@@ -208,7 +226,7 @@ function Header() {
             </ModalBody>
 
             <ModalFooter>
-            {isLoading ? (
+              {isLoading ? (
                 <Image src={spinner} alt="Loading" />
               ) : (
                 <Button colorScheme="red" mr={3} onClick={handleAddBook}>

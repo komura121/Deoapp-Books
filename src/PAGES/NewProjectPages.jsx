@@ -39,13 +39,14 @@ import generateChapters from "../../config/api";
 import { db } from "../../config/firebase";
 
 function NewProjectPages() {
-  const [chapters, setChapters] = useState(new Map());
+  const [chapters, setChapters] = useState([]);
   const [newChapter, setNewChapter] = useState(null);
   const [description, setDescription] = useState("");
   const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
   const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
   const { booksId, booksHeading } = useParams();
   const navigate = useNavigate();
+  const [response, setResponse] = useState();
 
   // Fetch Data
   useEffect(() => {
@@ -67,7 +68,9 @@ function NewProjectPages() {
             console.error("Cover image data not found in the book data.");
           }
           if (bookData && bookData.chapters) {
-            setChapters(new Map(Object.entries(bookData.chapters)));
+            // Convert chapters object to an array
+            const chaptersArray = Object.values(bookData.chapters);
+            setChapters(chaptersArray);
           } else {
             console.error("Chapters data not found in the book data.");
           }
@@ -105,64 +108,61 @@ function NewProjectPages() {
   };
 
   //Generate AI
+
+  // Generate AI
   const handleGenerate = async (e) => {
     e.preventDefault();
     try {
+      // Generate chapters and subchapters using the assistant
       const result = await generateChapters(booksHeading, description);
 
-      // Parse the response
-      const lines = result.split("\n").filter((line) => line.trim() !== "");
-      const newChapters = new Map();
-      let currentChapter = null;
+      if (!result || !result.chapters) {
+        console.error("Invalid response:", result);
+        return;
+      }
 
-      lines.forEach((line) => {
-        if (line.startsWith("Chapter")) {
-          const chapterParts = line.split(":");
-          currentChapter = {
-            id: Math.random().toString(36).substring(7),
-            title: chapterParts[0].trim(),
-            content: chapterParts[1].trim(),
-            subchapters: map(),
-          };
-          newChapters.set(currentChapter.id, currentChapter);
-        } else if (line.startsWith("Subchapter") && currentChapter) {
-          const subchapterParts = line.split(":");
-          currentChapter.subchapters.push({
-            title: subchapterParts[0].trim(),
-            content: subchapterParts[1].trim(),
-          });
-        }
-      });
+      const newChapters = result.chapters.map((chapter, index) => ({
+        chapId: Math.random().toString(36).substring(7),
+        title: chapter.title,
+        content: chapter.content,
+        subchapters: chapter.subchapters.map((subchapter, subIndex) => ({
+          subId: Math.random().toString(36).substring(7),
+          title: subchapter.title,
+          content: subchapter.content,
+        })),
+      }));
 
       const bookRef = doc(db, "books", booksId);
       const bookSnap = await getDoc(bookRef);
 
       if (bookSnap.exists()) {
         const bookData = bookSnap.data();
-        let existingChapters = bookData.chapters || {};
+        const existingChapters = bookData.chapters ? Object.values(bookData.chapters) : [];
 
-        newChapters.forEach((chapter, id) => {
-          existingChapters[id] = chapter;
-        });
+        const updatedChapters = [...existingChapters, ...newChapters];
 
         await updateDoc(bookRef, {
-          chapters: existingChapters,
+          chapters: updatedChapters.reduce((obj, chapter) => {
+            obj[chapter.chapId] = chapter;
+            return obj;
+          }, {}),
         });
 
-        setChapters(new Map(Object.entries(existingChapters)));
+        setChapters(updatedChapters);
 
-        console.log("Berhasil menambahkan chapter");
+        console.log("Successfully added chapters");
       } else {
         console.error("Book document does not exist.");
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error generating chapters:", error);
     }
   };
 
   const handleCardClicked = (chapterId) => {
     navigate(`/project/${booksId}/${booksHeading}/${chapterId}`);
   };
+
   return (
     <>
       <Navbar />
@@ -192,39 +192,48 @@ function NewProjectPages() {
               </Flex>
             </Box>
           </Box>
-          <Flex maxW="78%" minW="78%">
+          <Flex w="full" direction="column">
             <Box flex="1" bg="white" borderRadius="lg" px="5%" w="full">
               <Heading as="h2" size="md" my={5} fontWeight="600">
                 {booksHeading}
               </Heading>
               {/* Accordion  */}
-              <Accordion defaultIndex={[0]} allowMultiple w="full">
-                {Array.from(chapters).map(([key, value]) => (
-                  <AccordionItem key={key}>
-                    <h2>
-                      <AccordionButton>
-                        <Box flex="1" textAlign="left">
-                          <Text fontWeight="bold">{value.title}</Text>
-                        </Box>
-                        <AccordionIcon />
-                      </AccordionButton>
-                    </h2>
-                    <AccordionPanel pb={4} maxW="70%">
-                      <Box>
-                        <Button variant="ghost" fontWeight="400" onClick={handleCardClicked}>
-                          {value.content}
-                        </Button>
-                      </Box>
-                    </AccordionPanel>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+              {chapters.length === 0 ? (
+                <Text>Generate Your Chapters</Text>
+              ) : (
+                <Accordion defaultIndex={[0]} allowMultiple w="full">
+                  {chapters.map((chapter) => (
+                    <AccordionItem key={chapter.chapId}>
+                      <h2>
+                        <AccordionButton>
+                          <Box flex="1" textAlign="left">
+                            <Text fontWeight="bold">{chapter.title}</Text>
+                          </Box>
+                          <AccordionIcon />
+                        </AccordionButton>
+                      </h2>
+                      <AccordionPanel pb={4} maxW="70%">
+                        {chapter.subchapters &&
+                          Array.isArray(chapter.subchapters) &&
+                          chapter.subchapters.map((subchapter) => (
+                            <Box key={subchapter.subId}>
+                              <Button variant="ghost" fontWeight="400" onClick={() => handleCardClicked(chapter.id)}>
+                                {subchapter.title}
+                              </Button>
+                            </Box>
+                          ))}
+                      </AccordionPanel>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
               {/* END OF ACCORDION */}
             </Box>
+            <Box>{/* <Text>{result}</Text> */}</Box>
           </Flex>
         </Flex>
 
-        <Flex direction="column" px={{ base: "20%", md: "10%", lg: "8%" }}>
+        <Flex direction="column" px={{ base: "20%", md: "8%", lg: "8%" }}>
           <Box px="2%" py="2%" mx="2%" mb="5%" bg="white" borderRadius="xl">
             <Box align="end">
               <ButtonGroup size="md" isAttached variant="outline">
@@ -239,6 +248,7 @@ function NewProjectPages() {
               <FormControl>
                 <Textarea placeholder="Your Description" h={{ base: "180px", md: "200px" }} onChange={(e) => setDescription(e.target.value)} />
                 <FormHelperText>Describe Your Books</FormHelperText>
+                <Text>{response}</Text>
               </FormControl>
             </Box>
           </Box>
