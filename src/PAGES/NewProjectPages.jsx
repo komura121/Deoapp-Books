@@ -37,6 +37,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../config/firebase";
 import generateChapters from "../../config/api";
 import { db } from "../../config/firebase";
+import usePageStore from "../controller/usePageStore";
 
 function NewProjectPages() {
   const [chapters, setChapters] = useState([]);
@@ -107,16 +108,18 @@ function NewProjectPages() {
     }
   };
 
-  //Generate AI
-
   // Generate AI
+
   const handleGenerate = async (e) => {
     e.preventDefault();
     try {
       // Generate chapters and subchapters using the assistant
       const result = await generateChapters(booksHeading, description);
 
-      if (!result || !result.chapters) {
+      // Debugging log to check the response structure
+      console.log("Response from generateChapters:", result);
+
+      if (!result || !Array.isArray(result.chapters)) {
         console.error("Invalid response:", result);
         return;
       }
@@ -132,7 +135,7 @@ function NewProjectPages() {
         })),
       }));
 
-      const bookRef = doc(db, "books", booksId);
+      const bookRef = doc(db, "books", bookId);
       const bookSnap = await getDoc(bookRef);
 
       if (bookSnap.exists()) {
@@ -141,12 +144,13 @@ function NewProjectPages() {
 
         const updatedChapters = [...existingChapters, ...newChapters];
 
-        await updateDoc(bookRef, {
-          chapters: updatedChapters.reduce((obj, chapter) => {
-            obj[chapter.chapId] = chapter;
-            return obj;
-          }, {}),
-        });
+        // Create an object where keys are chapIds for Firestore update
+        const chaptersObj = updatedChapters.reduce((obj, chapter) => {
+          obj[chapter.chapId] = chapter;
+          return obj;
+        }, {});
+
+        await updateDoc(bookRef, { chapters: chaptersObj });
 
         setChapters(updatedChapters);
 
