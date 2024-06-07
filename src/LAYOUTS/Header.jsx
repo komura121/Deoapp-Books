@@ -1,25 +1,37 @@
 import logo from "../assets/images/BooksLogo.png";
-import svg from "../assets/images/blob.svg";
-import { VStack, Flex, Box, Card, CardHeader, CardBody, CardFooter, Text, Heading, Button, Image, Tooltip, SimpleGrid, Input, InputGroup, Tag } from "@chakra-ui/react";
+import { VStack, Flex, Box, Card, CardHeader, CardBody, CardFooter, Text, Heading, Button, Image, SimpleGrid, Input, InputGroup, Tag } from "@chakra-ui/react";
 import { useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton } from "@chakra-ui/react";
-import bg from "../assets/images/Bg.png";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { db, collection, addDoc, getDocs, deleteDoc, doc, query, where, getDoc } from "../../config/firebase";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { db, collection, getDocs, doc, query, where, getDoc } from "../../config/firebase";
 import { FcFullTrash } from "react-icons/fc";
 import { auth } from "../../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+import usePageStore from "../../config/usePageStore";
+import { useParams } from "react-router-dom";
 
 function Header() {
-  const [newBooks, setNewBooks] = useState([]);
-  const [newBookName, setNewBookName] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
-  const [coverImageFile, setCoverImageFile] = useState(null);
-  const [user, setUser] = useState(null);
-  const [userName, setUserName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
- 
+  const { booksId, booksHeading } = useParams();
+  const {
+    handleAddBook,
+    handleDeleteBook,
+    handleCardClicked,
+    newBooks,
+    newBookName,
+    coverImageUrl,
+    coverImageFile,
+    user,
+    userName,
+    isLoading,
+    setNewBooks,
+    setNewBookName,
+    setCoverImageFile,
+    setCoverImageUrl,
+    setUser,
+    setUserName,
+    setIsLoading,
+  } = usePageStore();
 
   const handleInputChange = (e) => {
     setNewBookName(e.target.value);
@@ -29,7 +41,9 @@ function Header() {
       setCoverImageFile(e.target.files[0]);
     }
   };
-
+  const handleClick = () => {
+    handleCardClicked(booksId, booksHeading, navigate);
+  };
   // Fetch user data and books
   useEffect(() => {
     const fetchUserData = async (uid) => {
@@ -64,54 +78,7 @@ function Header() {
     return () => unsubscribe();
   }, []);
 
-  // Add Data
-  const handleAddBook = async () => {
-    if (newBookName.trim() !== "" && coverImageFile) {
-      const storage = getStorage();
-      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
-      await uploadBytes(storageRef, coverImageFile);
-      const limageUrl = await getDownloadURL(storageRef);
-
-      const newBook = {
-        heading: newBookName,
-        coverImg: limageUrl,
-        text: "Lorem",
-        deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        price: "",
-        label: "",
-        category: "",
-        pemilik: userName,
-        uid: user.uid,
-      };
-
-      try {
-        const docRef = await addDoc(collection(db, "books"), newBook);
-        newBook.id = docRef.id;
-        setNewBooks([...newBooks, newBook]);
-        setNewBookName("");
-        setCoverImageFile(null);
-        onClose();
-        setIsLoading(false);
-      } catch (e) {
-        console.error("Error adding document: ", e);
-        setIsLoading(false);
-      }
-    }
-  };
-
   const navigate = useNavigate();
-  const handleDeleteBook = async (bookId) => {
-    try {
-      await deleteDoc(doc(db, "books", bookId));
-      setNewBooks(newBooks.filter((book) => book.id !== bookId));
-    } catch (error) {
-      console.error("Error deleting document: ", error);
-    }
-  };
-
-  const handleCardClicked = (booksId, booksHeading) => {
-    navigate(`/project/${booksId}/${booksHeading}/new`);
-  };
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -165,7 +132,7 @@ function Header() {
                             <FcFullTrash />
                           </Button>
                         </Flex>
-                        <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleCardClicked(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
+                        <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleClick(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
                           <Image w="180px" h="250px" src={item.coverImg} alt={item.heading} objectFit="cover" />
                         </Button>
                       </Box>
@@ -208,7 +175,7 @@ function Header() {
             </ModalBody>
 
             <ModalFooter>
-            {isLoading ? (
+              {isLoading ? (
                 <Image src={spinner} alt="Loading" />
               ) : (
                 <Button colorScheme="red" mr={3} onClick={handleAddBook}>

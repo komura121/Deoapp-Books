@@ -5,49 +5,6 @@ import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 const Product = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const cards = [
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 1",
-      author: "Jimi Hendrix",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 2",
-      author: "Synyster Gates",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 3",
-      author: "Jeff Beck",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 4",
-      author: "John Paul",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 5",
-      author: "Matumbaman",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 6",
-      author: "Miracle",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 7",
-      author: "Topson",
-    },
-    {
-      image: "https://s26162.pcdn.co/wp-content/uploads/2015/04/200px-The_Wind_from_Nowhere_1st.jpg",
-      title: "Card 8",
-      author: "Enigma",
-    },
-  ];
-
   const cardsPerPage = useBreakpointValue({ base: 1, md: 3, lg: 6 });
 
   const prevSlide = () => {

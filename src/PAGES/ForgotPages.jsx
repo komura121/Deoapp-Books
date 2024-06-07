@@ -8,12 +8,12 @@ import logo from "../assets/images/LogoBooks.png";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { IoMail } from "react-icons/io5";
 import { IoIosKey } from "react-icons/io";
+import { useStore } from "zustand";
+import usePageStore from "../../config/usePageStore";
 
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const { email, password, showPassword, setEmail, setPassword, setShowPassword } = usePageStore();
 
   const handleShowPassword = () => setShowPassword(!showPassword);
 

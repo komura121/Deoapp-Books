@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   Flex,
@@ -32,137 +32,25 @@ import { Link, useNavigate, useParams } from "react-router-dom"; // Import usePa
 import Navbar from "../LAYOUTS/Navbar";
 import Footer from "../LAYOUTS/Footer";
 import Background from "../LAYOUTS/Background";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import usePageStore from "../../config/usePageStore";
 import { storage } from "../../config/firebase";
-import generateChapters from "../../config/api";
 import { db } from "../../config/firebase";
+import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 
 function NewProjectPages() {
-  const [chapters, setChapters] = useState(new Map());
-  const [newChapter, setNewChapter] = useState(null);
-  const [description, setDescription] = useState("");
-  const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
-  const [coverImageUrl, setCoverImageUrl] = useState("https://www.atlantawatershed.org/wp-content/uploads/2017/06/default-placeholder.png");
   const { booksId, booksHeading } = useParams();
-  const navigate = useNavigate();
+  const { fetchBookData, handleAccordionClicked, handleChangeImage, handleGenerate, chapters, newChapter, description, coverImageUrl, setChapters, setNewChapters, setDescription, setCoverImageUrl } = usePageStore();
+  const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
 
-  // Fetch Data
+  // fetch Data
   useEffect(() => {
-    const fetchBookData = async () => {
-      if (!booksId) {
-        console.error("Book ID is undefined.");
-        return;
-      }
+    fetchBookData(booksId);
+  }, [booksId, fetchBookData]);
 
-      try {
-        const bookRef = doc(db, "books", booksId);
-        const bookSnap = await getDoc(bookRef);
+  // change Images
 
-        if (bookSnap.exists()) {
-          const bookData = bookSnap.data();
-          if (bookData && bookData.coverImg) {
-            setCoverImageUrl(bookData.coverImg);
-          } else {
-            console.error("Cover image data not found in the book data.");
-          }
-          if (bookData && bookData.chapters) {
-            setChapters(new Map(Object.entries(bookData.chapters)));
-          } else {
-            console.error("Chapters data not found in the book data.");
-          }
-        } else {
-          console.error("Book document does not exist.");
-        }
-      } catch (error) {
-        console.error("Error fetching book data:", error);
-      }
-    };
-
-    fetchBookData();
-  }, [booksId]);
-
-  // Ganti Gambar
-  const handleChangeImage = async (e) => {
-    const file = e.target.files[0];
-    const storageRef = ref(storage, `covers/${file.name}`);
-
-    try {
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      await uploadTask;
-
-      const downloadURL = await getDownloadURL(storageRef);
-      setCoverImageUrl(downloadURL);
-
-      closeImageBox();
-      const bookRef = doc(db, "books", booksId);
-      await updateDoc(bookRef, {
-        coverImg: downloadURL,
-      });
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    }
-  };
-
-  //Generate AI
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    try {
-      const result = await generateChapters(booksHeading, description);
-
-      // Parse the response
-      const lines = result.split("\n").filter((line) => line.trim() !== "");
-      const newChapters = new Map();
-      let currentChapter = null;
-
-      lines.forEach((line) => {
-        if (line.startsWith("Chapter")) {
-          const chapterParts = line.split(":");
-          currentChapter = {
-            id: Math.random().toString(36).substring(7),
-            title: chapterParts[0].trim(),
-            content: chapterParts[1].trim(),
-            subchapters: map(),
-          };
-          newChapters.set(currentChapter.id, currentChapter);
-        } else if (line.startsWith("Subchapter") && currentChapter) {
-          const subchapterParts = line.split(":");
-          currentChapter.subchapters.push({
-            title: subchapterParts[0].trim(),
-            content: subchapterParts[1].trim(),
-          });
-        }
-      });
-
-      const bookRef = doc(db, "books", booksId);
-      const bookSnap = await getDoc(bookRef);
-
-      if (bookSnap.exists()) {
-        const bookData = bookSnap.data();
-        let existingChapters = bookData.chapters || {};
-
-        newChapters.forEach((chapter, id) => {
-          existingChapters[id] = chapter;
-        });
-
-        await updateDoc(bookRef, {
-          chapters: existingChapters,
-        });
-
-        setChapters(new Map(Object.entries(existingChapters)));
-
-        console.log("Berhasil menambahkan chapter");
-      } else {
-        console.error("Book document does not exist.");
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const handleCardClicked = (chapterId) => {
-    navigate(`/project/${booksId}/${booksHeading}/${chapterId}`);
-  };
+  const navigate = useNavigate();
   return (
     <>
       <Navbar />
@@ -211,7 +99,7 @@ function NewProjectPages() {
                     </h2>
                     <AccordionPanel pb={4} maxW="70%">
                       <Box>
-                        <Button variant="ghost" fontWeight="400" onClick={handleCardClicked}>
+                        <Button variant="ghost" fontWeight="400" onClick={handleAccordionClicked}>
                           {value.content}
                         </Button>
                       </Box>

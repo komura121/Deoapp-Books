@@ -6,10 +6,14 @@ import Logo from "../assets/images/Deoapp.png";
 import { auth } from "../../config/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import usePageStore from "../../config/usePageStore";
 
 const Navbar = () => {
   const navigate = useNavigate();
-
+  const { signOut } = usePageStore();
+  const handleLogout = () => {
+    signOut(navigate);
+  };
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -22,16 +26,6 @@ const Navbar = () => {
 
     return () => unsubscribe(); // Cleanup subscription on unmount
   }, [navigate]);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      console.log("Signed out successfully");
-      navigate("/login");
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    }
-  };
 
   const navItems = [
     { icon: FcPackage, label: "Project", href: "/" },
