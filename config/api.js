@@ -1,47 +1,75 @@
-import axios from "axios";
+import Groq from "groq-sdk";
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-const isTestMode = import.meta.env.VITE_TEST_MODE === "true";
+const groq = new Groq({ apiKey: import.meta.env.VITE_OPENAI_API_KEY, dangerouslyAllowBrowser: true });
 
-const generateChapters = async (bookHeading, description) => {
-  if (isTestMode) {
-    // Mock response for test mode
-    return {
-      chapters: [
+export async function generateChapters(booksHeading, description) {
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
         {
-          title: "Chapter 1",
-          subchapters: ["Subchapter 1.1", "Subchapter 1.2"],
+          role: "system",
+          content:
+            "You are a book writer. Generate a minimum of 5 chapter titles and a maximum of 5 subchapter titles for each chapter. Each chapter should have a title and content, and each subchapter should also have a title and content.",
         },
         {
-          title: "Chapter 2",
-          subchapters: ["Subchapter 2.1", "Subchapter 2.2"],
+          role: "user",
+          content: `Generate chapter titles and subchapter titles based on the book title "${booksHeading}" or description: "${description}". Provide the response in the following JSON format:
+      
+          {
+            "chapters": [
+              {
+                "title": "Chapter 1 Title",
+                "content": "Chapter 1 Content",
+                "subchapters": [
+                  {
+                    "title": "Subchapter 1 Title",
+                    "content": "Subchapter 1 Content"
+                  },
+                  {
+                    "title": "Subchapter 2 Title",
+                   
+                  }
+                ]
+              },
+              {
+                "title": "Chapter 2 Title",
+                
+                "subchapters": [
+                  {
+                    "title": "Subchapter 1 Title",
+                    
+                  },
+                  {
+                    "title": "Subchapter 2 Title",
+                    
+                  }
+                ]
+              }
+            ]
+          }`,
         },
       ],
-    };
-  }
-
-  const endpoint = "https://api.aimlapi.com/v1/chat/completions";
-  const data = {
-    model: "mistralai/Mistral-7B-Instruct-v0.2",
-    messages: [
-      { role: "system", content: "You are a book writer. Generate a minimum of 5 chapter titles and a maximum of 5 subchapter titles for each." },
-      { role: "user", content: `Generate chapter titles and subchapter titles based on the book heading: ${bookHeading} with description: ${description}` },
-    ],
-    max_tokens: 100, // Adjust the token limit as needed
-  };
-
-  try {
-    const response = await axios.post(endpoint, data, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      model: "llama3-70b-8192",
+      temperature: 1,
+      max_tokens: 1024,
+      top_p: 1,
+      stream: true,
+      stop: null,
     });
-    return response.data.choices[0].message.content;
+
+    let response = "";
+    for await (const chunk of chatCompletion) {
+      response += chunk.choices[0].message.content;
+    }
+
+    const result = JSON.parse(response);
+    console.log("Parsed result:", result);
+
+    return result;
   } catch (error) {
-    console.error("Error making API call:", error);
-    throw error;
+    console.error("Error generating chapters:", error);
+    return null;
   }
-};
+}
 
 export default generateChapters;

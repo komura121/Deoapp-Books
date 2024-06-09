@@ -7,6 +7,8 @@ import { db, collection, getDocs, doc, query, where, getDoc } from "../../config
 import { FcFullTrash } from "react-icons/fc";
 import { auth } from "../../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { serverTimestamp } from "firebase/firestore";
 
 import usePageStore from "../../config/usePageStore";
 import { useParams } from "react-router-dom";
@@ -77,6 +79,53 @@ function Header() {
 
     return () => unsubscribe();
   }, []);
+
+  const currentDate = new Date(); // Current date and time
+
+  // Format current date and time into "DD/MM/YYYY HH:mm" format
+  const formattedDateTime = currentDate.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  // Add Data
+  const handleAddBook = async () => {
+    if (newBookName.trim() !== "" && coverImageFile) {
+      const storage = getStorage();
+      const storageRef = ref(storage, `covers/${coverImageFile.name}`);
+      await uploadBytes(storageRef, coverImageFile);
+      const limageUrl = await getDownloadURL(storageRef);
+
+      const newBook = {
+        heading: newBookName,
+        coverImg: limageUrl,
+        text: "Lorem",
+        deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        price: "",
+        label: "",
+        category: "",
+        pemilik: userName,
+        uid: user.uid,
+        created_at: formattedDateTime(),
+        updated_at: formattedDateTime(),
+      };
+
+      try {
+        const docRef = await addDoc(collection(db, "books"), newBook);
+        newBook.id = docRef.id;
+        setNewBooks([...newBooks, newBook]);
+        setNewBookName("");
+        setCoverImageFile(null);
+        onClose();
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        setIsLoading(false);
+      }
+    }
+  };
 
   const navigate = useNavigate();
 
@@ -151,6 +200,12 @@ function Header() {
                     <Text fontSize="8px" color="teal">
                       author : {item.pemilik}
                     </Text>
+                    {/* <Text fontSize="8px" color="teal">
+                      Last Modified : {item.updated_at}
+                    </Text>
+                    <Text fontSize="8px" color="teal">
+                      Created : {item.created_at}
+                    </Text> */}
                   </Card>
                 ))
               ) : (
