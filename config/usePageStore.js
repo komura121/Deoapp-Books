@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { useStore } from "zustand";
 import generateChapters from "./api";
@@ -21,13 +21,16 @@ const usePageStore = create((set) => ({
   email: "",
   password: "",
   showPassword: false,
+  error: "",
   chapters: new Map(),
   newChapter: null,
   description: null,
   booksId: "",
   booksHeading: "",
+  currentIndex: "",
 
   //   action
+  setCurrentIndex: (currentIndex) => set({ currentIndex }),
   setNewBooks: (newBooks) => set({ newBooks }),
   setNewBookName: (newBookName) => set({ newBookName }),
   setCoverImageUrl: (coverImageUrl) => set({ coverImageUrl }),
@@ -37,12 +40,13 @@ const usePageStore = create((set) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
   setEmail: (email) => set({ email }),
   setPassword: (password) => set({ password }),
+  setError: (error) => set({ error }),
   setShowPassword: (showPassword) => ({ showPassword }),
   setChapters: (chapters) => set({ chapters }),
   setNewChapter: (newChapter) => set({ newChapter }),
   setDescription: (description) => set(description),
   setBooksParams: (booksId, booksHeading) => set({ booksId, booksHeading }),
-  
+
   fetchBookData: async (booksId) => {
     if (!booksId) {
       console.error("Book ID is undefined.");
@@ -179,9 +183,7 @@ const usePageStore = create((set) => ({
   handleAccordionClicked: (chapterId, booksId, booksHeading, navigate) => {
     navigate(`/project/${booksId}/${booksHeading}/${chapterId}`);
   },
-  handleCardClicked: (booksId, booksHeading, navigate) => {
-    navigate(`/project/${booksId}/${booksHeading}/new`);
-  },
+
   signOut: async (navigate) => {
     try {
       await auth.signOut(); // Melakukan logout dengan Firebase Authentication
@@ -192,7 +194,7 @@ const usePageStore = create((set) => ({
     }
   },
   handleDeleteBook: async (bookId) => {
-    const { newBooks, setNewBooks } = useAuthStore.getState();
+    const { newBooks, setNewBooks } = usePageStore.getState();
 
     try {
       await deleteDoc(doc(db, "books", bookId));

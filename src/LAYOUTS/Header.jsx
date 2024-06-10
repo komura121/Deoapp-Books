@@ -3,7 +3,7 @@ import { VStack, Flex, Box, Card, CardHeader, CardBody, CardFooter, Text, Headin
 import { useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { db, collection, getDocs, doc, query, where, getDoc } from "../../config/firebase";
+import { db, collection, getDocs, doc, query, where, getDoc, addDoc } from "../../config/firebase";
 import { FcFullTrash } from "react-icons/fc";
 import { auth } from "../../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -15,37 +15,24 @@ import { useParams } from "react-router-dom";
 
 function Header() {
   const { booksId, booksHeading } = useParams();
-  const {
-    handleAddBook,
-    handleDeleteBook,
-    handleCardClicked,
-    newBooks,
-    newBookName,
-    coverImageUrl,
-    coverImageFile,
-    user,
-    userName,
-    isLoading,
-    setNewBooks,
-    setNewBookName,
-    setCoverImageFile,
-    setCoverImageUrl,
-    setUser,
-    setUserName,
-    setIsLoading,
-  } = usePageStore();
+  const { handleDeleteBook, newBooks, newBookName, coverImageUrl, coverImageFile, user, userName, isLoading, setNewBooks, setNewBookName, setCoverImageFile, setCoverImageUrl, setUser, setUserName, setIsLoading } = usePageStore();
 
   const handleInputChange = (e) => {
     setNewBookName(e.target.value);
   };
+
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
       setCoverImageFile(e.target.files[0]);
     }
   };
-  const handleClick = () => {
-    handleCardClicked(booksId, booksHeading, navigate);
+
+  const navigate = useNavigate();
+
+  const handleCardClicked = (id, heading) => {
+    navigate(`/project/${id}/${heading}/new`);
   };
+
   // Fetch user data and books
   useEffect(() => {
     const fetchUserData = async (uid) => {
@@ -80,36 +67,25 @@ function Header() {
     return () => unsubscribe();
   }, []);
 
-  const currentDate = new Date(); // Current date and time
-
-  // Format current date and time into "DD/MM/YYYY HH:mm" format
-  const formattedDateTime = currentDate.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
   // Add Data
   const handleAddBook = async () => {
     if (newBookName.trim() !== "" && coverImageFile) {
       const storage = getStorage();
       const storageRef = ref(storage, `covers/${coverImageFile.name}`);
       await uploadBytes(storageRef, coverImageFile);
-      const limageUrl = await getDownloadURL(storageRef);
+      const imageUrl = await getDownloadURL(storageRef);
 
       const newBook = {
         heading: newBookName,
-        coverImg: limageUrl,
+        coverImg: imageUrl,
         text: "Lorem",
         deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
         price: "",
         label: "",
         category: "",
+        status: "on Proses",
         pemilik: userName,
         uid: user.uid,
-        created_at: formattedDateTime(),
-        updated_at: formattedDateTime(),
       };
 
       try {
@@ -126,8 +102,6 @@ function Header() {
       }
     }
   };
-
-  const navigate = useNavigate();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -181,7 +155,7 @@ function Header() {
                             <FcFullTrash />
                           </Button>
                         </Flex>
-                        <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleClick(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
+                        <Button as={Box} maxW="200px" maxH="350px" variant="unstyled" onClick={() => handleCardClicked(item.id, item.heading)} cursor="pointer" _hover={{ boxShadow: "2xl", color: "black" }}>
                           <Image w="180px" h="250px" src={item.coverImg} alt={item.heading} objectFit="cover" />
                         </Button>
                       </Box>

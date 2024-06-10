@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Flex,
@@ -25,6 +25,7 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
+  Spinner,
 } from "@chakra-ui/react";
 import { FcEditImage } from "react-icons/fc";
 import { GiChaingun } from "react-icons/gi";
@@ -36,13 +37,13 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import usePageStore from "../../config/usePageStore";
 import { storage } from "../../config/firebase";
 import { db } from "../../config/firebase";
-import usePageStore from "../controller/usePageStore";
 import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 
 function NewProjectPages() {
   const { booksId, booksHeading } = useParams();
   const { fetchBookData, handleAccordionClicked, chapters, newChapter, description, coverImageUrl, setChapters, setNewChapters, setDescription, setCoverImageUrl } = usePageStore();
   const { isOpen: isImageBoxVisible, onOpen: openImageBox, onClose: closeImageBox } = useDisclosure();
+  const { isOpen: isSpinnerVisible, onOpen: openSpinnerBox, onClose: closeSpinnerBox } = useDisclosure();
 
   // fetch Data
   useEffect(() => {
@@ -95,7 +96,6 @@ function NewProjectPages() {
   const handleChangeImage = async (e) => {
     const file = e.target.files[0];
     const storageRef = ref(storage, `covers/${file.name}`);
-
     try {
       const uploadTask = uploadBytesResumable(storageRef, file);
       await uploadTask;
@@ -104,6 +104,12 @@ function NewProjectPages() {
       setCoverImageUrl(downloadURL);
 
       closeImageBox();
+      closeSpinnerBox();
+
+      if (!booksId) {
+        throw new Error("booksId is not defined");
+      }
+
       const bookRef = doc(db, "books", booksId);
       await updateDoc(bookRef, {
         coverImg: downloadURL,
@@ -189,7 +195,7 @@ function NewProjectPages() {
           <Box>
             <Box minW="300px" textAlign="center" p={{ base: "3%", lg: "5%" }} bg="white" borderRadius="lg">
               <Text p="2%">Cover Book</Text>
-              <Image src={coverImageUrl} alt="Cover Image" minH={{ base: "180px", sm: "230px", md: "250px", lg: "300px" }} maxW={{ base: "130px", sm: "180px", md: "200px", lg: "200px" }} mx="auto" />
+              <Image src={coverImageUrl} alt="Cover Image" minH={{ base: "180px", sm: "230px", md: "250px", lg: "300px" }} maxW={{ base: "130px", sm: "180px", md: "200px", lg: "200px" }} mx="auto" objectFit="cover" />
               <Flex justify="center" my={4} direction={{ base: "column", xl: "row" }}>
                 <ButtonGroup justifyContent="center" p={5}>
                   <Button onClick={openImageBox} leftIcon={<FcEditImage size="25px" />} colorScheme="blue" variant="solid" size="md">
@@ -211,29 +217,27 @@ function NewProjectPages() {
                 <Text>Generate Your Chapters</Text>
               ) : (
                 <Accordion defaultIndex={[0]} allowMultiple w="full">
-                  {chapters.map((chapter) => (
-                    <AccordionItem key={chapter.chapId}>
-                      <h2>
-                        <AccordionButton>
-                          <Box flex="1" textAlign="left">
-                            <Text fontWeight="bold">{chapter.title}</Text>
+                  <AccordionItem key={chapters.chapId}>
+                    <h2>
+                      <AccordionButton>
+                        <Box flex="1" textAlign="left">
+                          <Text fontWeight="bold">{chapters.title}</Text>
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                    </h2>
+                    <AccordionPanel pb={4} maxW="70%">
+                      {chapters.subchapters &&
+                        Array.isArray(chapters.subchapters) &&
+                        chapters.subchapters.map((subchapter) => (
+                          <Box key={subchapter.subId}>
+                            <Button variant="ghost" fontWeight="400" onClick={() => handleCardClicked(chapters.id)}>
+                              {subchapter.title}
+                            </Button>
                           </Box>
-                          <AccordionIcon />
-                        </AccordionButton>
-                      </h2>
-                      <AccordionPanel pb={4} maxW="70%">
-                        {chapter.subchapters &&
-                          Array.isArray(chapter.subchapters) &&
-                          chapter.subchapters.map((subchapter) => (
-                            <Box key={subchapter.subId}>
-                              <Button variant="ghost" fontWeight="400" onClick={() => handleCardClicked(chapter.id)}>
-                                {subchapter.title}
-                              </Button>
-                            </Box>
-                          ))}
-                      </AccordionPanel>
-                    </AccordionItem>
-                  ))}
+                        ))}
+                    </AccordionPanel>
+                  </AccordionItem>
                 </Accordion>
               )}
               {/* END OF ACCORDION */}
@@ -279,6 +283,14 @@ function NewProjectPages() {
               Cancel
             </Button>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={isSpinnerVisible}>
+        <ModalOverlay />
+        <ModalContent h="400px" bgColor="transparent">
+          <ModalBody align="center" mt="30%">
+            <Spinner size="xl" />
+          </ModalBody>
         </ModalContent>
       </Modal>
       <Footer />

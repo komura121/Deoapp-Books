@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Flex, FormControl, useToast, Image, Input, Button, InputGroup, InputRightElement, InputLeftAddon, IconButton, Link, ButtonGroup, Text } from "@chakra-ui/react";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../../config/firebase";
+import { auth, googleProvider, setDoc, doc, db } from "../../config/firebase";
 import logo from "../assets/images/LogoBooks.png";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { IoMail } from "react-icons/io5";
@@ -25,6 +25,13 @@ function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       // Signed in
       const user = userCredential.user;
+      toast({
+        title: "Login Succesfully!",
+        description: `Welcome ${email}`,
+        status: "success",
+        duration: 9000,
+        isClosable: true,
+      });
       navigate("/");
       console.log(user);
     } catch (error) {
@@ -32,13 +39,26 @@ function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignup = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      await setDoc(doc(db, "users", user.uid), {
+        name: user.displayName,
+        email: user.email,
+        uid: user.uid,
+        createdAt: new Date(),
+      });
+      toast({
+        title: "Signed up with Google successfully!",
+        description: "We've created your account for you.",
+        status: "success",
+        duration: 9000,
+        isClosable: true,
+      });
       navigate("/");
-      alert("Logged in with Google successfully!");
     } catch (error) {
-      setError("Gagal Login Menggunakan Email");
+      setError(error.message);
     }
   };
 
@@ -91,7 +111,7 @@ function Login() {
             </Button>
           </ButtonGroup>
         </form>
-        <Button colorScheme="red" mb={4} w="full" onClick={handleGoogleLogin}>
+        <Button colorScheme="red" mb={4} w="full" onClick={handleGoogleSignup}>
           Login with Google
         </Button>
         <Box textAlign="center" mt={4} fontSize="12px">
